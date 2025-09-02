@@ -76,11 +76,11 @@ def generate(model, prompt, steps=128, gen_length=128, block_length=128, tempera
                 un_x = x.clone()
                 un_x[prompt_index] = mask_id
                 x_ = torch.cat([x, un_x], dim=0)
-                logits = model(x_).logits
+                logits = model(x_, output_hidden_states=True).logits
                 logits, un_logits = torch.chunk(logits, 2, dim=0)
                 logits = un_logits + (cfg_scale + 1) * (logits - un_logits)
             else:
-                logits = model(x).logits
+                logits = model(x, output_hidden_states=True).logits
 
             logits_with_noise = add_gumbel_noise(logits, temperature=temperature)
             x0 = torch.argmax(logits_with_noise, dim=-1) # b, l
