@@ -27,7 +27,7 @@ tokenizer = AutoTokenizer.from_pretrained('GSAI-ML/LLaDA-8B-Instruct', trust_rem
 
 def encode_batch(batch):
     inputs = tokenizer(batch, return_tensors="pt", padding=True, truncation=True, max_length=128).to(device)
-    input_ids = torch.tensor(inputs["input_ids"]).to(device).unsqueeze(0)
+    input_ids = torch.tensor(inputs["input_ids"]).to(device)
     with torch.no_grad():
         outputs = generate(model, input_ids, gen_length=0, block_length=0)
     hidden_states = outputs.hidden_states[len(outputs.hidden_states) // 2]  # Middle Layer
