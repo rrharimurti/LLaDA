@@ -29,7 +29,7 @@ def encode_batch(batch):
     inputs = tokenizer(batch, return_tensors="pt", padding=True, truncation=True, max_length=128).to(device)
     input_ids = torch.tensor(inputs["input_ids"]).to(device)
     with torch.no_grad():
-        outputs = generate(model, input_ids, gen_length=0, block_length=0)
+        outputs = generate(model, input_ids, gen_length=52, block_length=26)
     hidden_states = outputs.hidden_states[len(outputs.hidden_states) // 2]  # Middle Layer
     return hidden_states.mean(dim=1).cpu()
 
