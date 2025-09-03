@@ -9,7 +9,7 @@ from generate import generate
 # -------------------------------
 # 1. Load BeaverTails dataset
 # -------------------------------
-ds = load_dataset("PKU-Alignment/BeaverTails", split="train")
+ds = load_dataset("PKU-Alignment/BeaverTails", split="30k_train")
 
 benign_prompts = [ex["prompt"] for ex in ds if ex["is_safe"] == True]
 jailbreak_prompts = [ex["prompt"] for ex in ds if ex["is_safe"] == False]
@@ -79,7 +79,7 @@ def sparsity_loss(z, lam=1e-3):
 train_loader = DataLoader(TensorDataset(benign_embeds), batch_size=32, shuffle=True)
 
 for epoch in range(5):
-    sae.train()
+    sae.traitn()
     for (batch,) in train_loader:
         batch = batch.to(device)
         x_hat, z = sae(batch)
