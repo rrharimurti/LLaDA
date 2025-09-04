@@ -34,11 +34,9 @@ def encode_batch(batch):
         for ids in input_ids:
             out = generate(model, ids.unsqueeze(0), gen_length=52, block_length=26)
             outputs.append(out)
+            hidden_states.append(out.hidden_states)
         outputs = torch.cat(outputs, dim=0)
-        hidden_states = torch.cat([
-            outputs.hidden_states[len(outputs.hidden_states) // 2]  # Middle Layer
-            for _ in input_ids
-        ], dim=0)
+        hidden_states = torch.cat(hidden_states, dim=0)
     return hidden_states.mean(dim=1).cpu()
 
 # Precompute embeddings with chat template applied to each prompt
