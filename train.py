@@ -32,9 +32,9 @@ def encode_batch(batch):
         outputs = []
         hidden_states = []
         for ids in input_ids:
-            out = generate(model, ids.unsqueeze(0), gen_length=52, block_length=26)
+            out, hidden_state = generate(model, ids.unsqueeze(0), gen_length=52, block_length=26)
             outputs.append(out)
-            hidden_states.append(out.hidden_states)
+            hidden_states.append(hidden_state)
         outputs = torch.cat(outputs, dim=0)
         hidden_states = torch.cat(hidden_states, dim=0)
     return hidden_states.mean(dim=1).cpu()

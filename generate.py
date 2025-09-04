@@ -81,6 +81,7 @@ def generate(model, prompt, steps=128, gen_length=128, block_length=128, tempera
                 logits = un_logits + (cfg_scale + 1) * (logits - un_logits)
             else:
                 logits = model(x, output_hidden_states=True).logits
+                hidden_states = model(x, output_hidden_states=True).hidden_states
 
             logits_with_noise = add_gumbel_noise(logits, temperature=temperature)
             x0 = torch.argmax(logits_with_noise, dim=-1) # b, l
@@ -105,7 +106,7 @@ def generate(model, prompt, steps=128, gen_length=128, block_length=128, tempera
                 transfer_index[j, select_index] = True
             x[transfer_index] = x0[transfer_index]
 
-    return x
+    return x, hidden_states[len(hidden_states) // 2]
 
 def main(prompt: str, steps: int, gen_length: int, block_length: int, temperature: float):
     device = 'cuda'
@@ -120,7 +121,7 @@ def main(prompt: str, steps: int, gen_length: int, block_length: int, temperatur
     input_ids = tokenizer(prompt)['input_ids']
     input_ids = torch.tensor(input_ids).to(device).unsqueeze(0)
 
-    out = generate(model, input_ids, steps=steps, gen_length=gen_length, block_length=block_length, temperature=temperature, cfg_scale=0., remasking='low_confidence')
+    out, _ = generate(model, input_ids, steps=steps, gen_length=gen_length, block_length=block_length, temperature=temperature, cfg_scale=0., remasking='low_confidence')
     print(tokenizer.batch_decode(out[:, input_ids.shape[1]:], skip_special_tokens=True)[0])
 
 if __name__ == '__main__':
