@@ -22,15 +22,23 @@ print(f"Testing on {len(jailbreak_prompts)} jailbreak prompts")
 # -------------------------------
 device = "cuda"
 
-model = AutoModel.from_pretrained('GSAI-ML/LLaDA-8B-Instruct', trust_remote_code=True, torch_dtype=torch.bfloat16).to(device).eval()
+model = AutoModel.from_pretrained('GSAI-ML/LLaDA-8B-Instruct', trust_remote_code=True, torch_dtype=torch.bfloat16, output_hidden_states=True).to(device).eval()
 tokenizer = AutoTokenizer.from_pretrained('GSAI-ML/LLaDA-8B-Instruct', trust_remote_code=True)
 
 def encode_batch(batch):
     inputs = tokenizer(batch, return_tensors="pt", padding=True, truncation=True, max_length=128).to(device)
     input_ids = torch.tensor(inputs["input_ids"]).to(device)
     with torch.no_grad():
-        outputs = generate(model, input_ids, gen_length=52, block_length=26)
-    hidden_states = outputs.hidden_states[len(outputs.hidden_states) // 2]  # Middle Layer
+        outputs = []
+        hidden_states = []
+        for ids in input_ids:
+            out = generate(model, ids.unsqueeze(0), gen_length=52, block_length=26)
+            outputs.append(out)
+        outputs = torch.cat(outputs, dim=0)
+        hidden_states = torch.cat([
+            outputs.hidden_states[len(outputs.hidden_states) // 2]  # Middle Layer
+            for _ in input_ids
+        ], dim=0)
     return hidden_states.mean(dim=1).cpu()
 
 # Precompute embeddings with chat template applied to each prompt
