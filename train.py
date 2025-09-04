@@ -40,20 +40,27 @@ def encode_batch(batch):
     return hidden_states.mean(dim=1).cpu()
 
 # Precompute embeddings with chat template applied to each prompt
-benign_embeds = torch.cat([
-    encode_batch([
+benign_embeds_list = []
+for i in range(0, len(benign_prompts), 32):
+    batch_prompts = [
         tokenizer.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True, tokenize=False)
         for prompt in benign_prompts[i:i+32]
-    ])
-    for i in range(0, len(benign_prompts), 32)
-])
-jailbreak_embeds = torch.cat([
-    encode_batch([
+    ]
+    embeds = encode_batch(batch_prompts)
+    benign_embeds_list.append(embeds)
+    print(f"{i}/{len(benign_prompts)} benign prompts done")
+benign_embeds = torch.cat(benign_embeds_list)
+
+jailbreak_embeds_list = []
+for i in range(0, len(jailbreak_prompts), 32):
+    batch_prompts = [
         tokenizer.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True, tokenize=False)
         for prompt in jailbreak_prompts[i:i+32]
-    ])
-    for i in range(0, len(jailbreak_prompts), 32)
-])
+    ]
+    embeds = encode_batch(batch_prompts)
+    jailbreak_embeds_list.append(embeds)
+    print(f"{i}/{len(jailbreak_prompts)} jailbreak prompts done")
+jailbreak_embeds = torch.cat(jailbreak_embeds_list)
 
 # -------------------------------
 # 3. Define Sparse Autoencoder
