@@ -85,6 +85,7 @@ model = AutoModel.from_pretrained(
     trust_remote_code=True,
     torch_dtype=torch.bfloat16,
     output_hidden_states=True,
+    attn_implementation="flash_attention_2"
 ).to(device).eval()
 
 tokenizer = AutoTokenizer.from_pretrained(
@@ -128,7 +129,7 @@ def collate_fn(batch):
 # -------------------------------
 # 4. Encode batches (no generate!)
 # -------------------------------
-def encode_dataset(prompts, batch_size=128):
+def encode_dataset(prompts, batch_size=32):
     dataset = PromptDataset(prompts, tokenizer)
     loader = DataLoader(
         dataset,
