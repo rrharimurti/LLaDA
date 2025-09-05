@@ -147,8 +147,8 @@ def encode_dataset(prompts, batch_size=32):
             outputs = model(**inputs, output_hidden_states=True)
             # hidden_states is a tuple: (layer, batch, seq, dim)
             hidden_states = torch.stack(outputs.hidden_states)  # [n_layers, batch, seq, dim]
-            # average across layers and sequence
-            embeds = hidden_states.mean(dim=0).mean(dim=1)  # [batch, dim]
+            # Treat each token embedding as one training sample
+            embeds = outputs.hidden_states[-2].reshape(-1, hidden_dim)  # [(batch*seq), dim]
             all_embeds.append(embeds.cpu())
         if i % 10 == 0:
             print(f"{i * batch_size}/{len(prompts)} prompts done")
@@ -197,7 +197,7 @@ def sparsity_loss(z, lam=1e-3):
 train_loader = DataLoader(TensorDataset(benign_embeds), batch_size=32, shuffle=True)
 
 for epoch in range(5):
-    sae.traitn()
+    sae.train()
     for (batch,) in train_loader:
         batch = batch.to(device)
         x_hat, z = sae(batch)
