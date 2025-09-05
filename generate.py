@@ -81,7 +81,6 @@ def generate(model, prompt, steps=128, gen_length=128, block_length=128, tempera
                 logits = un_logits + (cfg_scale + 1) * (logits - un_logits)
             else:
                 logits = model(x, output_hidden_states=True).logits
-                hidden_states = model(x, output_hidden_states=True).hidden_states
 
             logits_with_noise = add_gumbel_noise(logits, temperature=temperature)
             x0 = torch.argmax(logits_with_noise, dim=-1) # b, l
@@ -106,7 +105,7 @@ def generate(model, prompt, steps=128, gen_length=128, block_length=128, tempera
                 transfer_index[j, select_index] = True
             x[transfer_index] = x0[transfer_index]
 
-    return x, hidden_states[len(hidden_states) // 2]
+    return x
 
 def main(prompt: str, steps: int, gen_length: int, block_length: int, temperature: float):
     device = 'cuda'

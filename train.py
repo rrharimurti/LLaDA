@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, Dataset, TensorDataset
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModel
 from sklearn.metrics import roc_auc_score
 from generate import generate
-
+"""
+# OLD CODE
 # -------------------------------
 # 1. Load BeaverTails dataset
 # -------------------------------
@@ -61,6 +62,110 @@ for i in range(0, len(jailbreak_prompts), 32):
     jailbreak_embeds_list.append(embeds)
     print(f"{i}/{len(jailbreak_prompts)} jailbreak prompts done")
 jailbreak_embeds = torch.cat(jailbreak_embeds_list)
+"""
+
+# -------------------------------
+# 1. Load BeaverTails dataset
+# -------------------------------
+ds = load_dataset("PKU-Alignment/BeaverTails", split="30k_train")
+
+benign_prompts = [ex["prompt"] for ex in ds if ex["is_safe"]]
+jailbreak_prompts = [ex["prompt"] for ex in ds if not ex["is_safe"]]
+
+print(f"Training on {len(benign_prompts)} benign prompts")
+print(f"Testing on {len(jailbreak_prompts)} jailbreak prompts")
+
+# -------------------------------
+# 2. Load LM
+# -------------------------------
+device = "cuda"
+
+model = AutoModel.from_pretrained(
+    "GSAI-ML/LLaDA-8B-Instruct",
+    trust_remote_code=True,
+    torch_dtype=torch.bfloat16,
+    output_hidden_states=True,
+).to(device).eval()
+
+tokenizer = AutoTokenizer.from_pretrained(
+    "GSAI-ML/LLaDA-8B-Instruct",
+    trust_remote_code=True
+)
+
+# -------------------------------
+# 3. Torch Dataset for batching
+# -------------------------------
+class PromptDataset(Dataset):
+    def __init__(self, prompts, tokenizer):
+        # Pre-tokenize once, apply chat template
+        self.examples = [
+            tokenizer.apply_chat_template(
+                [{"role": "user", "content": p}],
+                add_generation_prompt=True,
+                tokenize=False
+            )
+            for p in prompts
+        ]
+        self.tokenizer = tokenizer
+
+    def __len__(self):
+        return len(self.examples)
+
+    def __getitem__(self, idx):
+        return self.examples[idx]
+
+
+def collate_fn(batch):
+    return tokenizer(
+        batch,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=128
+    )
+
+
+# -------------------------------
+# 4. Encode batches (no generate!)
+# -------------------------------
+def encode_dataset(prompts, batch_size=128):
+    dataset = PromptDataset(prompts, tokenizer)
+    loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=collate_fn,
+        num_workers=4,
+        pin_memory=True
+    )
+
+    all_embeds = []
+
+    for i, inputs in enumerate(loader):
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        with torch.no_grad():
+            outputs = model(**inputs, output_hidden_states=True)
+            # hidden_states is a tuple: (layer, batch, seq, dim)
+            hidden_states = torch.stack(outputs.hidden_states)  # [n_layers, batch, seq, dim]
+            # average across layers and sequence
+            embeds = hidden_states.mean(dim=0).mean(dim=1)  # [batch, dim]
+            all_embeds.append(embeds.cpu())
+        if i % 10 == 0:
+            print(f"{i * batch_size}/{len(prompts)} prompts done")
+
+    return torch.cat(all_embeds, dim=0)
+
+
+# -------------------------------
+# 5. Run for benign & jailbreak
+# -------------------------------
+print("Encoding benign prompts...")
+benign_embeds = encode_dataset(benign_prompts)
+
+print("Encoding jailbreak prompts...")
+jailbreak_embeds = encode_dataset(jailbreak_prompts)
+
+print("Shapes:", benign_embeds.shape, jailbreak_embeds.shape)
 
 # -------------------------------
 # 3. Define Sparse Autoencoder
