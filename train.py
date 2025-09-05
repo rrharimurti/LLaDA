@@ -85,7 +85,6 @@ model = AutoModel.from_pretrained(
     trust_remote_code=True,
     torch_dtype=torch.bfloat16,
     output_hidden_states=True,
-    attn_implementation="flash_attention_2"
 ).to(device).eval()
 
 tokenizer = AutoTokenizer.from_pretrained(
