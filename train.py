@@ -187,14 +187,14 @@ class SparseAutoencoder(nn.Module):
 input_dim = benign_embeds.shape[1]
 hidden_dim = 512
 
-sae = SparseAutoencoder(input_dim, hidden_dim).to(device)
+sae = SparseAutoencoder(input_dim, hidden_dim).to(device, dtype=torch.bfloat16)
 optimizer = torch.optim.Adam(sae.parameters(), lr=1e-3)
 criterion = nn.MSELoss()
 
 def sparsity_loss(z, lam=1e-3):
     return lam * torch.mean(torch.abs(z))
 
-train_loader = DataLoader(TensorDataset(benign_embeds), batch_size=32, shuffle=True)
+train_loader = DataLoader(TensorDataset(benign_embeds.to(device, dtype=torch.bfloat16)), batch_size=32, shuffle=True)
 
 for epoch in range(5):
     sae.train()
