@@ -188,15 +188,15 @@ input_dim = benign_embeds.shape[1]
 hidden_dim = 512
 
 sae = SparseAutoencoder(input_dim, hidden_dim).to(device, dtype=torch.bfloat16)
-optimizer = torch.optim.Adam(sae.parameters(), lr=1e-3)
+optimizer = torch.optim.Adam(sae.parameters(), lr=1e-4)
 criterion = nn.MSELoss()
 
-def sparsity_loss(z, lam=1e-3):
+def sparsity_loss(z, lam=1e-4):
     return lam * torch.mean(torch.abs(z))
 
 train_loader = DataLoader(TensorDataset(benign_embeds.to(device, dtype=torch.bfloat16)), batch_size=32, shuffle=True)
 
-for epoch in range(5):
+for epoch in range(50):
     sae.train()
     for (batch,) in train_loader:
         batch = batch.to(device)
@@ -224,10 +224,3 @@ jailbreak_errors = reconstruction_error(jailbreak_embeds)
 
 print(f"Avg benign error:   {benign_errors.mean():.4f}")
 print(f"Avg jailbreak error:{jailbreak_errors.mean():.4f}")
-
-# Labels: 0 = benign, 1 = jailbreak
-labels = [0] * len(benign_errors) + [1] * len(jailbreak_errors)
-scores = torch.cat([benign_errors, jailbreak_errors]).numpy()
-
-roc_auc = roc_auc_score(labels, scores)
-print(f"ROC–AUC: {roc_auc:.4f}")
