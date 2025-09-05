@@ -138,7 +138,7 @@ def encode_dataset(prompts, batch_size=32):
         num_workers=4,
         pin_memory=True
     )
-
+    hidden_dim = model.config.hidden_size
     all_embeds = []
 
     for i, inputs in enumerate(loader):
